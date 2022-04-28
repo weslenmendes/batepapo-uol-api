@@ -150,6 +150,34 @@ app.get("/messages", async (req, res) => {
   }
 });
 
+app.post("/status", async (req, res) => {
+  if (!req.headers.user) {
+    res.status(422).send("É necessário o nome do usuário");
+    return;
+  }
+
+  const user = sanitizeString(req.headers.user);
+
+  try {
+    const thisParticipantExists = await db
+      .collection("participants")
+      .findOne({ name: user });
+
+    if (!thisParticipantExists) {
+      res.sendStatus(404);
+      return;
+    }
+
+    await db
+      .collection("participants")
+      .updateOne({ name: user }, { $set: { lastStatus: Date.now() } });
+    res.sendStatus(200);
+  } catch (e) {
+    console.error(e);
+    res.sendStatus(500);
+  }
+});
+
 connectWithDB()
   .then(() => {
     app.listen(port, () => {
