@@ -89,6 +89,7 @@ app.post("/messages", async (req, res) => {
 
   try {
     const usernameSanitized = sanitizeString(user);
+    console.log(usernameSanitized);
     const userExists = await db
       .collection("participants")
       .findOne({ name: usernameSanitized });
@@ -115,8 +116,33 @@ app.post("/messages", async (req, res) => {
 });
 
 app.get("/messages", async (req, res) => {
+  if (!req.headers.user) {
+    res.status(422).send("Informe o nome do participante no header.");
+    return;
+  }
+
+  const user = sanitizeString(req.headers.user);
+  const limit = parseInt(req.query.limit);
+
   try {
-    const allMessages = await db.collection("messages").find({}).toArray();
+    const allMessages = await db
+      .collection("messages")
+      .find({
+        $or: [
+          { to: user },
+          { to: "Todos" },
+          { from: user },
+          { type: "message" },
+        ],
+      })
+      .toArray();
+
+    if (limit) {
+      const lastMessages = [...allMessages].slice(-limit);
+      res.send(lastMessages);
+      return;
+    }
+
     res.send(allMessages);
   } catch (e) {
     console.error(e);
