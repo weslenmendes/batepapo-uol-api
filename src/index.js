@@ -55,6 +55,19 @@ app.post("/participants", async (req, res) => {
   }
 });
 
+app.get("/participants", async (req, res) => {
+  try {
+    const allParticipants = await db
+      .collection("participants")
+      .find({})
+      .toArray();
+    res.send(allParticipants);
+  } catch (e) {
+    console.log("Ocorreu um erro: ", e);
+    res.sendStatus(500);
+  }
+});
+
 connectWithDB()
   .then(() => {
     app.listen(port, () => {
