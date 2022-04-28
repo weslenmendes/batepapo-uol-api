@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 
 const url = process.env.DB_URL;
 const client = new MongoClient(url);
@@ -13,4 +13,4 @@ async function connectWithDB() {
   }
 }
 
-export { connectWithDB, client, db };
+export { connectWithDB, client, db, ObjectId };
