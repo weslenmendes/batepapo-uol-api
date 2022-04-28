@@ -114,6 +114,16 @@ app.post("/messages", async (req, res) => {
   }
 });
 
+app.get("/messages", async (req, res) => {
+  try {
+    const allMessages = await db.collection("messages").find({}).toArray();
+    res.send(allMessages);
+  } catch (e) {
+    console.error(e);
+    res.sendStatus(500);
+  }
+});
+
 connectWithDB()
   .then(() => {
     app.listen(port, () => {
