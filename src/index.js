@@ -1,10 +1,13 @@
 import "dotenv/config";
 import express, { json } from "express";
 import cors from "cors";
-import Joi from "joi";
 import dayjs from "dayjs";
 
-import { connectWithDB, db, ObjectId } from "./db/index.js";
+import { connectWithDB, ObjectId, db } from "./db/index.js";
+import {
+  messageSchema,
+  participantSchema,
+} from "./helpers/validation_schema.js";
 import { sanitizeString } from "./utils/index.js";
 
 const app = express();
@@ -12,14 +15,6 @@ const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(json());
-
-const messageSchema = Joi.object({
-  to: Joi.string().required(),
-  text: Joi.string().required(),
-  type: Joi.string().pattern(new RegExp("^(private_)?message$")).required(),
-});
-
-const participantSchema = Joi.string().required();
 
 const removeInactiveParticipants = (
   inactivityLimitInSeconds,
@@ -67,7 +62,7 @@ removeInactiveParticipants(10, 15);
 
 app.post("/participants", async (req, res) => {
   const { name } = req.body;
-  const { error } = Joi.string().required().validate(name);
+  const { error } = participantSchema.validate(name);
 
   if (error) {
     res.status(422).send("name deve ser strings não vazio.");
