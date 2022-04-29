@@ -46,7 +46,9 @@ const removeInactiveParticipants = (
             time: dayjs().format("HH:mm:ss"),
           };
 
-          await db.collection("participants").deleteOne({ _id: ObjectId(_id) });
+          await db
+            .collection("participants")
+            .deleteOne({ _id: new ObjectId(_id) });
           await db.collection("messages").insertOne(deleteMessage);
         }
       }
