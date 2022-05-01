@@ -90,6 +90,7 @@ app.post("/messages", async (req, res) => {
     const userExists = await db
       .collection("participants")
       .findOne({ name: userSanitized });
+
     const receiverExists = await db
       .collection("participants")
       .findOne({ name: toSanitized });
@@ -98,7 +99,7 @@ app.post("/messages", async (req, res) => {
       return res.status(422).send("Esse usuário não existe.");
     }
 
-    if (!receiverExists) {
+    if (!receiverExists && toSanitized !== "Todos") {
       return res.status(422).send("Esse destinatário não existe.");
     }
 
@@ -198,7 +199,6 @@ app.put("/messages/:messageId", async (req, res) => {
       to: sanitizeString(to),
       text: sanitizeString(text),
       type: sanitizeString(type),
-      time: dayjs().format("HH:mm:ss"),
     };
 
     await db
