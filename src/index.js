@@ -292,12 +292,13 @@ app.delete("/messages/:messageId", async (req, res) => {
 });
 
 app.post("/status", async (req, res) => {
-  if (!req.headers.user) {
-    res.status(422).send("É necessário o nome do usuário");
-    return;
+  let user = req.headers.user;
+
+  if (!user) {
+    return res.status(422).send("É necessário o nome do usuário");
   }
 
-  const user = sanitizeString(req.headers.user);
+  user = sanitizeString(user);
 
   try {
     const thisParticipantExists = await db
@@ -305,8 +306,7 @@ app.post("/status", async (req, res) => {
       .findOne({ name: user });
 
     if (!thisParticipantExists) {
-      res.sendStatus(404);
-      return;
+      return res.sendStatus(404);
     }
 
     await db
@@ -314,8 +314,8 @@ app.post("/status", async (req, res) => {
       .updateOne({ name: user }, { $set: { lastStatus: Date.now() } });
     res.sendStatus(200);
   } catch (e) {
-    console.error(e);
     res.sendStatus(500);
+    console.error(e);
   }
 });
 
