@@ -89,7 +89,7 @@ app.post("/messages", async (req, res) => {
     const toSanitized = sanitizeString(to);
     const userExists = await db
       .collection("participants")
-      .findOne({ name: usernameSanitized });
+      .findOne({ name: userSanitized });
     const receiverExists = await db
       .collection("participants")
       .findOne({ name: toSanitized });
