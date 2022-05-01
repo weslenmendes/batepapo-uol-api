@@ -252,6 +252,40 @@ app.put("/messages/:messageId", async (req, res) => {
   }
 });
 
+app.delete("/messages/:messageId", async (req, res) => {
+  let { user } = req.headers;
+
+  const { error } = participantSchema.validate(user, options);
+
+  if (error) {
+    const allMessagesOfError = error.details.map(({ message }) => message);
+
+    return res.status(422).send(allMessagesOfError);
+  }
+
+  try {
+    const { messageId } = req.params;
+    const objectId = new ObjectId(messageId);
+    user = sanitizeString(user);
+
+    const message = await db.collection("messages").findOne({ _id: objectId });
+
+    if (!message) {
+      return res.status(404).send("Essa mensagem não existe.");
+    }
+
+    if (message.from !== user) {
+      return res.status(401).send("Usuário não é dono da mensagem.");
+    }
+
+    await db.collection("messages").deleteOne({ _id: objectId });
+    res.sendStatus(200);
+  } catch (e) {
+    res.sendStatus(500);
+    console.error(e);
+  }
+});
+
 app.post("/status", async (req, res) => {
   if (!req.headers.user) {
     res.status(422).send("É necessário o nome do usuário");
