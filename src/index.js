@@ -111,8 +111,8 @@ app.get("/participants", async (req, res) => {
       .toArray();
     res.send(allParticipants);
   } catch (e) {
-    console.log("Ocorreu um erro: ", e);
     res.sendStatus(500);
+    console.error(e);
   }
 });
 
