@@ -17,52 +17,6 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(json());
 
-const removeInactiveParticipants = (
-  inactivityLimitInSeconds,
-  timeOfIntervalInSeconds
-) => {
-  const timeOfIntervalInMiliseconds = timeOfIntervalInSeconds * 1000;
-
-  const removeParticipants = async () => {
-    const msInSeconds = (ms) => ms / 1000;
-
-    try {
-      const allParticipants = await db
-        .collection("participants")
-        .find({})
-        .toArray();
-
-      for (const participant of allParticipants) {
-        const { _id, name, lastStatus } = participant;
-
-        if (
-          msInSeconds(Date.now()) - msInSeconds(lastStatus) >
-          inactivityLimitInSeconds
-        ) {
-          const deleteMessage = {
-            from: name,
-            to: "Todos",
-            text: "sai da sala...",
-            type: "status",
-            time: dayjs().format("HH:mm:ss"),
-          };
-
-          await db
-            .collection("participants")
-            .deleteOne({ _id: new ObjectId(_id) });
-          await db.collection("messages").insertOne(deleteMessage);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  return setInterval(removeParticipants, timeOfIntervalInMiliseconds);
-};
-
-removeInactiveParticipants(10, 15);
-
 app.post("/participants", async (req, res) => {
   const { name } = req.body;
   const { error } = participantSchema.validate(name);
@@ -318,6 +272,52 @@ app.post("/status", async (req, res) => {
     console.error(e);
   }
 });
+
+const removeInactiveParticipants = (
+  inactivityLimitInSeconds,
+  timeOfIntervalInSeconds
+) => {
+  const timeOfIntervalInMiliseconds = timeOfIntervalInSeconds * 1000;
+
+  const removeParticipants = async () => {
+    const msInSeconds = (ms) => ms / 1000;
+
+    try {
+      const allParticipants = await db
+        .collection("participants")
+        .find({})
+        .toArray();
+
+      for (const participant of allParticipants) {
+        const { _id, name, lastStatus } = participant;
+
+        if (
+          msInSeconds(Date.now()) - msInSeconds(lastStatus) >
+          inactivityLimitInSeconds
+        ) {
+          const deleteMessage = {
+            from: name,
+            to: "Todos",
+            text: "sai da sala...",
+            type: "status",
+            time: dayjs().format("HH:mm:ss"),
+          };
+
+          await db
+            .collection("participants")
+            .deleteOne({ _id: new ObjectId(_id) });
+          await db.collection("messages").insertOne(deleteMessage);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  return setInterval(removeParticipants, timeOfIntervalInMiliseconds);
+};
+
+removeInactiveParticipants(10, 15);
 
 connectWithDB()
   .then(() => {
