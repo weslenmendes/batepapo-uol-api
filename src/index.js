@@ -119,52 +119,60 @@ app.get("/participants", async (req, res) => {
 app.post("/messages", async (req, res) => {
   const { to, text, type } = req.body;
   const { user } = req.headers;
-  const validateMessage = messageSchema.validate(req.body);
-  const validateParticipant = participantSchema.validate(user);
+  const { error } = messageSchema.validate(
+    { from: user, to, text, type },
+    options
+  );
 
-  if (validateMessage.error || validateParticipant.error) {
-    res.status(422).send("Ocorreu um erro no formato da mensagem.");
-    return;
+  if (error) {
+    const allMessagesOfError = error.details.map(({ message }) => message);
+
+    return res.status(422).send(allMessagesOfError);
   }
 
   try {
-    const usernameSanitized = sanitizeString(user);
-    console.log(usernameSanitized);
+    const userSanitized = sanitizeString(user);
+    const toSanitized = sanitizeString(to);
     const userExists = await db
       .collection("participants")
       .findOne({ name: usernameSanitized });
-
-    // Criar validação se o to (destinatário) existe
+    const receiverExists = await db
+      .collection("participants")
+      .findOne({ name: toSanitized });
 
     if (!userExists) {
-      res.status(422).send("Esse usuário não existe.");
-      return;
+      return res.status(422).send("Esse usuário não existe.");
+    }
+
+    if (!receiverExists) {
+      return res.status(422).send("Esse destinatário não existe.");
     }
 
     const message = {
-      to: sanitizeString(to),
+      to: toSanitized,
       text: sanitizeString(text),
       type: sanitizeString(type),
-      from: usernameSanitized,
+      from: userSanitized,
       time: dayjs().format("HH:mm:ss"),
     };
 
     await db.collection("messages").insertOne(message);
     res.sendStatus(201);
   } catch (e) {
-    console.error(e);
     res.sendStatus(500);
+    console.error(e);
   }
 });
 
 app.get("/messages", async (req, res) => {
-  if (!req.headers.user) {
-    res.status(422).send("Informe o nome do participante no header.");
-    return;
+  let user = req.headers.user;
+
+  if (!user) {
+    return res.status(422).send("Informe o nome do participante no header.");
   }
 
-  const user = sanitizeString(req.headers.user);
   const limit = parseInt(req.query.limit);
+  user = sanitizeString(user);
 
   try {
     const allMessages = await db
@@ -181,14 +189,13 @@ app.get("/messages", async (req, res) => {
 
     if (limit) {
       const lastMessages = [...allMessages].slice(-limit);
-      res.send(lastMessages);
-      return;
+      return res.send(lastMessages);
     }
 
     res.send(allMessages);
   } catch (e) {
-    console.error(e);
     res.sendStatus(500);
+    console.error(e);
   }
 });
 
