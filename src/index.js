@@ -68,8 +68,7 @@ app.post("/participants", async (req, res) => {
   const { error } = participantSchema.validate(name);
 
   if (error) {
-    res.status(422).send("name deve ser strings não vazio.");
-    return;
+    return res.status(422).send("name deve ser strings não vazio.");
   }
 
   try {
@@ -79,8 +78,7 @@ app.post("/participants", async (req, res) => {
       .findOne({ name: nameSanitized });
 
     if (thisNameAlreadyExists) {
-      res.status(409).send("Esse name já está sendo usado.");
-      return;
+      return res.status(409).send("Esse name já está sendo usado.");
     }
 
     const newUser = {
@@ -100,8 +98,8 @@ app.post("/participants", async (req, res) => {
     await db.collection("messages").insertOne(newUserMessage);
     res.sendStatus(201);
   } catch (e) {
-    console.log("Ocorreu um erro:", e);
     res.sendStatus(500);
+    console.error(e);
   }
 });
 
