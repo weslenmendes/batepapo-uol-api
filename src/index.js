@@ -7,6 +7,7 @@ import { connectWithDB, ObjectId, db } from "./db/index.js";
 import {
   messageSchema,
   participantSchema,
+  options,
 } from "./helpers/validation_schema.js";
 import { sanitizeString } from "./utils/index.js";
 
@@ -135,6 +136,8 @@ app.post("/messages", async (req, res) => {
       .collection("participants")
       .findOne({ name: usernameSanitized });
 
+    // Criar validação se o to (destinatário) existe
+
     if (!userExists) {
       res.status(422).send("Esse usuário não existe.");
       return;
@@ -188,6 +191,64 @@ app.get("/messages", async (req, res) => {
   } catch (e) {
     console.error(e);
     res.sendStatus(500);
+  }
+});
+
+app.put("/messages/:messageId", async (req, res) => {
+  const { to, text, type } = req.body;
+  const from = req.headers.user;
+
+  const validateMessage = messageSchema.validate(
+    { from, to, text, type },
+    options
+  );
+
+  if (validateMessage.error) {
+    const { error } = validateMessage;
+
+    const allMessagesOfError = error.details.map(({ message }) => message);
+
+    return res.status(422).send(allMessagesOfError);
+  }
+
+  try {
+    const { messageId } = req.params;
+    const user = sanitizeString(from);
+    const objectId = new ObjectId(messageId);
+
+    const thisParticipantExists = await db.collection("participants").findOne({
+      name: user,
+    });
+
+    if (!thisParticipantExists) {
+      return res.send(404).send("Participante não existe.");
+    }
+
+    const message = await db.collection("messages").findOne({ _id: objectId });
+
+    if (!message) {
+      return res.status(404).send("Essa mensagem não existe.");
+    }
+
+    if (message.from !== user) {
+      return res.status(401).send("Usuário não é dono da mensagem.");
+    }
+
+    const messageBody = {
+      from: user,
+      to: sanitizeString(to),
+      text: sanitizeString(text),
+      type: sanitizeString(type),
+      time: dayjs().format("HH:mm:ss"),
+    };
+
+    await db
+      .collection("messages")
+      .updateOne({ _id: objectId }, { $set: messageBody });
+    res.sendStatus(200);
+  } catch (e) {
+    res.sendStatus(500);
+    console.error(e);
   }
 });
 
