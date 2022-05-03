@@ -61,7 +61,7 @@ Passo 3: Após o término da instalação das dependências, podemos executar o 
 npm run dev
 ```
 
-Com a finalização de todos os passos anteriores, o nosso server deve estar sendo executado na porta 5000 da nossa máquina local.
+Com a finalização de todos os passos anteriores, o nosso server deve estar sendo executado na porta 5000 da nossa máquina local, mas especificamente em: _http://localhost:5000_.
 
 ---
 
