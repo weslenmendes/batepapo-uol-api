@@ -18,7 +18,7 @@ app.use(cors());
 app.use(json());
 
 app.post("/participants", async (req, res) => {
-  const name = sanitizeString(req.body.name || "<br/>");
+  const name = sanitizeString(req.body.name);
   const { error } = participantSchema.validate(name);
 
   if (error) {
@@ -70,10 +70,10 @@ app.get("/participants", async (req, res) => {
 });
 
 app.post("/messages", async (req, res) => {
-  const to = sanitizeString(req.body.to || "<br/>");
-  const text = sanitizeString(req.body.text || "<br/>");
-  const type = sanitizeString(req.body.type || "<br/>");
-  const from = sanitizeString(req.headers.user || "<br/>");
+  const to = sanitizeString(req.body.to);
+  const text = sanitizeString(req.body.text);
+  const type = sanitizeString(req.body.type);
+  const from = sanitizeString(req.headers.user);
 
   const { error } = messageSchema.validate({ from, to, text, type }, options);
 
@@ -108,7 +108,7 @@ app.post("/messages", async (req, res) => {
 });
 
 app.get("/messages", async (req, res) => {
-  const user = sanitizeString(req.headers.user || "<br/>");
+  const user = sanitizeString(req.headers.user);
   const limit = parseInt(req.query.limit);
 
   if (!user) {
@@ -141,10 +141,10 @@ app.get("/messages", async (req, res) => {
 });
 
 app.put("/messages/:messageId", async (req, res) => {
-  const to = sanitizeString(req.body.to || "<br/>");
-  const text = sanitizeString(req.body.text || "<br/>");
-  const type = sanitizeString(req.body.type || "<br/>");
-  const from = sanitizeString(req.headers.user || "<br/>");
+  const to = sanitizeString(req.body.to);
+  const text = sanitizeString(req.body.text);
+  const type = sanitizeString(req.body.type);
+  const from = sanitizeString(req.headers.user);
 
   const { error } = messageSchema.validate({ from, to, text, type }, options);
 
@@ -193,7 +193,7 @@ app.put("/messages/:messageId", async (req, res) => {
 });
 
 app.delete("/messages/:messageId", async (req, res) => {
-  const from = sanitizeString(req.headers.user || "<br/>");
+  const from = sanitizeString(req.headers.user);
   const { error } = participantSchema.validate(from, options);
 
   if (error) {
@@ -224,7 +224,7 @@ app.delete("/messages/:messageId", async (req, res) => {
 });
 
 app.post("/status", async (req, res) => {
-  const name = sanitizeString(req.headers.user || "<br/>");
+  const name = sanitizeString(req.headers.user);
   const { error } = participantSchema.validate(name, options);
 
   if (error) {

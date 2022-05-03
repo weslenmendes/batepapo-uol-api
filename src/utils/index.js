@@ -21,7 +21,8 @@ const utf8Decode = (utf8String) => {
 };
 
 const sanitizeString = (string) => {
-  return utf8Decode(stripHtml(string).result.trim());
+  const newString = string || "<br/>";
+  return utf8Decode(stripHtml(newString).result.trim());
 };
 
 export { sanitizeString };
