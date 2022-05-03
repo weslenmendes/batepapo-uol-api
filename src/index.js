@@ -18,7 +18,7 @@ app.use(cors());
 app.use(json());
 
 app.post("/participants", async (req, res) => {
-  const { name } = req.body;
+  const name = sanitizeString(req.body.name || "<br/>");
   const { error } = participantSchema.validate(name);
 
   if (error) {
@@ -26,22 +26,21 @@ app.post("/participants", async (req, res) => {
   }
 
   try {
-    const nameSanitized = sanitizeString(name);
     const thisNameAlreadyExists = await db
       .collection("participants")
-      .findOne({ name: nameSanitized });
+      .findOne({ name });
 
     if (thisNameAlreadyExists) {
       return res.status(409).send("Esse name já está sendo usado.");
     }
 
     const newUser = {
-      name: nameSanitized,
+      name,
       lastStatus: Date.now(),
     };
 
     const newUserMessage = {
-      from: nameSanitized,
+      from: name,
       to: "Todos",
       text: "entra na sala...",
       type: "status",
@@ -71,43 +70,32 @@ app.get("/participants", async (req, res) => {
 });
 
 app.post("/messages", async (req, res) => {
-  const { to, text, type } = req.body;
-  const { user } = req.headers;
-  const { error } = messageSchema.validate(
-    { from: user, to, text, type },
-    options
-  );
+  const to = sanitizeString(req.body.to || "<br/>");
+  const text = sanitizeString(req.body.text || "<br/>");
+  const type = sanitizeString(req.body.type || "<br/>");
+  const from = sanitizeString(req.headers.user || "<br/>");
+
+  const { error } = messageSchema.validate({ from, to, text, type }, options);
 
   if (error) {
     const allMessagesOfError = error.details.map(({ message }) => message);
-
     return res.status(422).send(allMessagesOfError);
   }
 
   try {
-    const userSanitized = sanitizeString(user);
-    const toSanitized = sanitizeString(to);
     const userExists = await db
       .collection("participants")
-      .findOne({ name: userSanitized });
-
-    const receiverExists = await db
-      .collection("participants")
-      .findOne({ name: toSanitized });
+      .findOne({ name: from });
 
     if (!userExists) {
       return res.status(422).send("Esse usuário não existe.");
     }
 
-    if (!receiverExists && toSanitized !== "Todos") {
-      return res.status(422).send("Esse destinatário não existe.");
-    }
-
     const message = {
-      to: toSanitized,
-      text: sanitizeString(text),
-      type: sanitizeString(type),
-      from: userSanitized,
+      to,
+      text,
+      type,
+      from,
       time: dayjs().format("HH:mm:ss"),
     };
 
@@ -120,14 +108,12 @@ app.post("/messages", async (req, res) => {
 });
 
 app.get("/messages", async (req, res) => {
-  let user = req.headers.user;
+  const user = sanitizeString(req.headers.user || "<br/>");
+  const limit = parseInt(req.query.limit);
 
   if (!user) {
     return res.status(422).send("Informe o nome do participante no header.");
   }
-
-  const limit = parseInt(req.query.limit);
-  user = sanitizeString(user);
 
   try {
     const allMessages = await db
@@ -155,29 +141,24 @@ app.get("/messages", async (req, res) => {
 });
 
 app.put("/messages/:messageId", async (req, res) => {
-  const { to, text, type } = req.body;
-  const from = req.headers.user;
+  const to = sanitizeString(req.body.to || "<br/>");
+  const text = sanitizeString(req.body.text || "<br/>");
+  const type = sanitizeString(req.body.type || "<br/>");
+  const from = sanitizeString(req.headers.user || "<br/>");
 
-  const validateMessage = messageSchema.validate(
-    { from, to, text, type },
-    options
-  );
+  const { error } = messageSchema.validate({ from, to, text, type }, options);
 
-  if (validateMessage.error) {
-    const { error } = validateMessage;
-
+  if (error) {
     const allMessagesOfError = error.details.map(({ message }) => message);
-
     return res.status(422).send(allMessagesOfError);
   }
 
   try {
-    const { messageId } = req.params;
-    const user = sanitizeString(from);
+    const messageId = req.params.messageId;
     const objectId = new ObjectId(messageId);
 
     const thisParticipantExists = await db.collection("participants").findOne({
-      name: user,
+      name: from,
     });
 
     if (!thisParticipantExists) {
@@ -190,15 +171,15 @@ app.put("/messages/:messageId", async (req, res) => {
       return res.status(404).send("Essa mensagem não existe.");
     }
 
-    if (message.from !== user) {
+    if (message.from !== from) {
       return res.status(401).send("Usuário não é dono da mensagem.");
     }
 
     const messageBody = {
-      from: user,
-      to: sanitizeString(to),
-      text: sanitizeString(text),
-      type: sanitizeString(type),
+      from,
+      to,
+      text,
+      type,
     };
 
     await db
@@ -212,20 +193,17 @@ app.put("/messages/:messageId", async (req, res) => {
 });
 
 app.delete("/messages/:messageId", async (req, res) => {
-  let { user } = req.headers;
-
-  const { error } = participantSchema.validate(user, options);
+  const from = sanitizeString(req.headers.user || "<br/>");
+  const { error } = participantSchema.validate(from, options);
 
   if (error) {
     const allMessagesOfError = error.details.map(({ message }) => message);
-
     return res.status(422).send(allMessagesOfError);
   }
 
   try {
-    const { messageId } = req.params;
+    const messageId = req.params.messageId;
     const objectId = new ObjectId(messageId);
-    user = sanitizeString(user);
 
     const message = await db.collection("messages").findOne({ _id: objectId });
 
@@ -233,7 +211,7 @@ app.delete("/messages/:messageId", async (req, res) => {
       return res.status(404).send("Essa mensagem não existe.");
     }
 
-    if (message.from !== user) {
+    if (message.from !== from) {
       return res.status(401).send("Usuário não é dono da mensagem.");
     }
 
@@ -246,18 +224,18 @@ app.delete("/messages/:messageId", async (req, res) => {
 });
 
 app.post("/status", async (req, res) => {
-  let user = req.headers.user;
+  const name = sanitizeString(req.headers.user || "<br/>");
+  const { error } = participantSchema.validate(name, options);
 
-  if (!user) {
-    return res.status(422).send("É necessário o nome do usuário");
+  if (error) {
+    const allMessagesOfError = error.details.map(({ message }) => message);
+    return res.status(422).send(allMessagesOfError);
   }
-
-  user = sanitizeString(user);
 
   try {
     const thisParticipantExists = await db
       .collection("participants")
-      .findOne({ name: user });
+      .findOne({ name });
 
     if (!thisParticipantExists) {
       return res.sendStatus(404);
@@ -265,7 +243,8 @@ app.post("/status", async (req, res) => {
 
     await db
       .collection("participants")
-      .updateOne({ name: user }, { $set: { lastStatus: Date.now() } });
+      .updateOne({ name }, { $set: { lastStatus: Date.now() } });
+
     res.sendStatus(200);
   } catch (e) {
     res.sendStatus(500);
@@ -273,10 +252,10 @@ app.post("/status", async (req, res) => {
   }
 });
 
-const removeInactiveParticipants = (
-  inactivityLimitInSeconds,
-  timeOfIntervalInSeconds
-) => {
+function removeInactiveParticipants(
+  inactivityLimitInSeconds = 10,
+  timeOfIntervalInSeconds = 15
+) {
   const timeOfIntervalInMiliseconds = timeOfIntervalInSeconds * 1000;
 
   const removeParticipants = async () => {
@@ -315,16 +294,18 @@ const removeInactiveParticipants = (
   };
 
   return setInterval(removeParticipants, timeOfIntervalInMiliseconds);
-};
+}
 
-removeInactiveParticipants(10, 15);
-
-connectWithDB()
-  .then(() => {
+async function startServer() {
+  try {
+    await connectWithDB();
     app.listen(port, () => {
       console.log(`🚀 Server is running on: http://localhost:${port}/`);
     });
-  })
-  .catch((e) => {
-    console.log("Ocorreu um erro na conexão com o banco", e);
-  });
+    removeInactiveParticipants();
+  } catch (e) {
+    console.log("Ocorreu um erro na inicialização do servidor", e);
+  }
+}
+
+startServer();
